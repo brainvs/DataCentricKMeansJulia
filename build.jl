@@ -1,17 +1,17 @@
-import Pkg
+# deps/build.jl
+
+using Pkg
 
 println("Running build.jl")
 
-if !haskey(Pkg.installed(), "Pkg")
-    Pkg.add("Pkg")
-end
-
+# Çalıştırılabilir dosyaların yolunu belirleyin
 executables = [
     joinpath(@__DIR__, "..", "src", "DataCentricKMeans_linux.out"),
     joinpath(@__DIR__, "..", "src", "DataCentricKMeans_universal.out"),
     joinpath(@__DIR__, "..", "src", "DataCentricKMeans_windows.exe")
 ]
 
+# İzinleri ayarlayın
 for exe in executables
     if isfile(exe)
         println("Setting executable permissions for $exe")

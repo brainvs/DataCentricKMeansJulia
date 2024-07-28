@@ -1,5 +1,7 @@
 name = "DataCentricKMeans"
 uuid = "d41a56ac-46a8-4ddf-9292-1ad439f60671"
 authors = ["Vasfi Tataroglu <vtatarog@iu.edu>"]
-version = "0.1.0"
+version = "0.2.0"
 
+[build]
+command = "julia --project -e 'include(\"build.jl\")'"
