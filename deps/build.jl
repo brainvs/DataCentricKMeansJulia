@@ -2,6 +2,10 @@ import Pkg
 
 println("Running build.jl")
 
+if !haskey(Pkg.installed(), "Pkg")
+    Pkg.add("Pkg")
+end
+
 executables = [
     joinpath(@__DIR__, "..", "src", "DataCentricKMeans_linux.out"),
     joinpath(@__DIR__, "..", "src", "DataCentricKMeans_universal.out"),
