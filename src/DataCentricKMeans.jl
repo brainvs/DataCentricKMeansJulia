@@ -2,7 +2,7 @@ module DataCentricKMeans
 
 export KMeansResult, run_lloyd_kmeans, run_geokmeans, run_elkan_kmeans, run_hamerly_kmeans, run_annulus_kmeans, run_exponion_kmeans
 
-struct KMeansResult
+mutable struct KMeansResult
     loop_counter::Int
     num_dists::Int
     assignments::Vector{Int}
@@ -10,6 +10,7 @@ struct KMeansResult
     sse::Float64
 end
 
+# Define the run functions for each algorithm
 function run_lloyd_kmeans(num_iterations::Int, threshold::Float64, num_clusters::Int; seed::Union{Int, Nothing}=nothing, file_paths::Vector{String}=String[])
     if seed === nothing
         seed = 42  # Default seed value
@@ -89,10 +90,11 @@ function run_cpp_program(algorithm::String, num_iterations::Int, threshold::Floa
     command = `$executable_path $algorithm $num_iterations $threshold $num_clusters $seed $file_paths_str`
     
     try
-        run(command)
+        output = read(command, String)  # Capture the command output and don't print it to the console
         outputs = []
         for path in file_paths
-            output_path = replace(path, ".txt" => "-solution-$algorithm.txt")
+            base_path, ext = splitext(path)
+            output_path = joinpath(dirname(abspath(path)), "$(basename(base_path))-solution-$algorithm.txt")
             push!(outputs, read_output_file(output_path))
         end
         return outputs
@@ -105,11 +107,11 @@ function read_output_file(filepath::String)
     lines = readlines(filepath)
     
     result_data = KMeansResult(
-        0,
-        0,
-        Int[],
-        Vector{Float64}[],
-        0.0
+        0, # Initial value for loop_counter
+        0, # Initial value for num_dists
+        Int[], # Initial value for assignments
+        Vector{Vector{Float64}}[], # Initial value for centroids
+        0.0 # Initial value for SSE
     )
     
     centroid_section = false
@@ -120,17 +122,19 @@ function read_output_file(filepath::String)
         elseif startswith(line, "Number of Distances:")
             result_data.num_dists = parse(Int, split(line, ":")[2])
         elseif startswith(line, "Assignments:")
-            assignments = split(lines[findfirst(x -> startswith(x, "Assignments:"), lines) + 1])
-            result_data.assignments = parse.(Int, assignments)
+            assignments_index = findfirst(x -> startswith(x, "Assignments:"), lines) + 1
+            while assignments_index <= length(lines) && !startswith(lines[assignments_index], "Centroids:") && !isempty(strip(lines[assignments_index]))
+                assignments = split(lines[assignments_index])
+                result_data.assignments = vcat(result_data.assignments, parse.(Int, assignments))
+                assignments_index += 1
+            end
         elseif startswith(line, "Centroids:")
             centroid_section = true
         elseif startswith(line, "SSE:")
-            result_data.sse = parse(Float64, split(line, ":")[1])
-        elseif centroid_section
-            if !isempty(strip(line))
-                centroids = parse.(Float64, split(line))
-                push!(result_data.centroids, centroids)
-            end
+            result_data.sse = parse(Float64, split(line, ":")[2])
+        elseif centroid_section && !isempty(strip(line)) && !startswith(line, "SSE:")
+            centroid_values = parse.(Float64, split(line))
+            push!(result_data.centroids, centroid_values)
         end
     end
     
